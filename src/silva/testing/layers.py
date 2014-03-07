@@ -249,3 +249,12 @@ SILVA_ZSERVER = FunctionalTesting(
 SILVA_FTP_SERVER = FunctionalTesting(
     bases=(SILVA_FIXTURE, z2.FTP_SERVER_FIXTURE), name='Silva:FTPServer'
 )
+
+
+from plone.robotframework.layers import REMOTE_LIBRARY_FIXTURE
+
+
+SILVA_ROBOT_TESTING = FunctionalTesting(
+    bases=(SILVA_FIXTURE, REMOTE_LIBRARY_FIXTURE, z2.ZSERVER_FIXTURE),
+    name="Plone:Robot"
+)

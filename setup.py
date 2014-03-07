@@ -35,6 +35,7 @@ setup(name='silva.testing',
       install_requires=[
           'setuptools',
           'plone.testing',
+          'plone.robotframework',
       ],
       entry_points="""
       # -*- Entry points: -*-
