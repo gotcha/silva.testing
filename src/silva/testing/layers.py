@@ -256,5 +256,5 @@ from plone.robotframework.layers import REMOTE_LIBRARY_FIXTURE
 
 SILVA_ROBOT_TESTING = FunctionalTesting(
     bases=(SILVA_FIXTURE, REMOTE_LIBRARY_FIXTURE, z2.ZSERVER_FIXTURE),
-    name="Plone:Robot"
+    name="SILVA_ROBOT_TESTING"
 )
