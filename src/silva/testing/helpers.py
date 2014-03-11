@@ -56,12 +56,7 @@ def pushGlobalRegistry(silvaroot, new=None, name=None):
     from zope.app.component.hooks import setSite, getSite, setHooks
     site = getSite()
 
-    localSiteManager = silvaroot.getSiteManager()
-
     current = zca.pushGlobalRegistry(new=new)
-
-    if current not in localSiteManager.__bases__:
-        localSiteManager.__bases__ = (current, )
 
     if site is not None:
         setHooks()
@@ -78,31 +73,8 @@ def popGlobalRegistry(silvaroot):
     new global registry as its base.
     """
 
-    # First, check if the component site has the global site manager in its
-    # bases. If so, that site manager is about to disappear, so set its
-    # base(s) as the new base(s) for the local site manager.
-
-    from zope.component import getGlobalSiteManager
-    globalSiteManager = getGlobalSiteManager()
-
-    gsmBases = globalSiteManager.__bases__
-
     from zope.app.component.hooks import setSite, getSite, setHooks
     site = getSite()
-
-    localSiteManager = silvaroot.getSiteManager()
-
-    bases = []
-    changed = False
-    for base in localSiteManager.__bases__:
-        if base is globalSiteManager:
-            bases.extend(gsmBases)
-            changed = True
-        else:
-            bases.append(base)
-
-    if changed:
-        localSiteManager.__bases__ = tuple(bases)
 
     # Now pop the registry. We need to do it in this somewhat convoluted way
     # to avoid the risk of unpickling errors
@@ -117,7 +89,7 @@ def popGlobalRegistry(silvaroot):
 
 
 def silvaRoot(db=None, connection=None, environ=None):
-    """Context manager for working with the Silva silvaroot during layer setup::
+    """Context manager for working with the Silva root during layer setup::
 
         with silvaRoot() as silvaroot:
             ...
@@ -125,23 +97,20 @@ def silvaRoot(db=None, connection=None, environ=None):
     This is based on the ``z2.zopeApp()`` context manager. See the module
      ``plone.testing.z2`` for details.
 
-    Do not use this in a test. Use the 'silvaroot' resource from the SilvaFixture
-    layer instead!
+    Do not use this in a test.
+    Use the 'silvaroot' resource from the SilvaFixture layer instead!
 
     Pass a ZODB handle as ``db`` to use a specificdatabase. Alternatively,
     pass an open connection as ``connection`` (the connection will not be
     closed).
     """
 
-    from zope.app.component.hooks import setSite, getSite, setHooks
+    from zope.app.component.hooks import setHooks
     setHooks()
-
-    site = getSite()
 
     for app in z2.zopeApp(db, connection, environ):
         silvaroot = app[SILVA_SITE_ID]
 
-        setSite(silvaroot)
         login(silvaroot, SITE_OWNER_NAME)
 
         try:
@@ -150,17 +119,8 @@ def silvaRoot(db=None, connection=None, environ=None):
         # 2.4 does not accept yield in a try...finally
         except:
             logout()
-            checkSite(site, silvaroot)
         else:
             logout()
-            checkSite(site, silvaroot)
-
-
-def checkSite(site, silvaroot):
-    from zope.app.component.hooks import setSite
-    if site is not silvaroot:
-        setSite(site)
-
 
 # Layer base class
 
@@ -205,7 +165,8 @@ class SilvaSandboxLayer(Layer):
     def setUpSilvaSite(self, silvaroot):
         """Set up the Silva site.
 
-        ``silvaroot`` is the Silva site. Provided no exception is raised, changes
+        ``silvaroot`` is the Silva site.
+        Provided no exception is raised, changes
         to this site will be committed (into a newly stacked ``DemoStorage``).
 
         Concrete layer classes should implement this method at a minimum.
@@ -228,7 +189,9 @@ class SilvaSandboxLayer(Layer):
 
         # Push a new database storage so that database changes
         # commited during layer setup can be easily torn down
-        self['zodbDB'] = zodb.stackDemoStorage(self.get('zodbDB'), name=self.__name__)
+        self['zodbDB'] = zodb.stackDemoStorage(
+            self.get('zodbDB'), name=self.__name__
+        )
 
         # Push a new configuration context so that it's possible to re-import
         # ZCML files after tear-down
@@ -245,11 +208,8 @@ class SilvaSandboxLayer(Layer):
         )
 
         for silvaroot in silvaRoot():
-            from zope.app.component.hooks import setSite, setHooks
+            from zope.app.component.hooks import setHooks
             setHooks()
-
-            # Make sure there's no local site manager while we load ZCML
-            setSite(None)
 
             # Push a new component registry so that ZCML registations
             # and other global component registry changes are sandboxed
@@ -260,20 +220,10 @@ class SilvaSandboxLayer(Layer):
 
             security.pushCheckers()
 
-            from Products.PluggableAuthService.PluggableAuthService import MultiPlugins
-
-            preSetupMultiPlugins = MultiPlugins[:]
-
             # Allow subclass to load ZCML and products
             self.setUpZope(silvaroot.getPhysicalRoot(), configurationContext)
 
-            # Allow subclass to configure a persistent fixture
-            setSite(silvaroot)
             self.setUpSilvaSite(silvaroot)
-            setSite(None)
-
-        # Keep track of PAS plugins that were added during setup
-        self.snapshotMultiPlugins(preSetupMultiPlugins)
 
     def tearDown(self):
 
@@ -281,14 +231,11 @@ class SilvaSandboxLayer(Layer):
 
             silvaroot = app[SILVA_SITE_ID]
 
-            from zope.app.component.hooks import setSite, setHooks
+            from zope.app.component.hooks import setHooks
             setHooks()
-            setSite(silvaroot)
 
             # Allow subclass to tear down persistent fixture
             self.tearDownSilvaSite(silvaroot)
-
-            setSite(None)
 
             # Make sure zope.security checkers can be set up and torn down
             # reliably
@@ -298,9 +245,6 @@ class SilvaSandboxLayer(Layer):
             # Pop the component registry, thus removing component
             # architecture registrations
             popGlobalRegistry(silvaroot)
-
-            # Remove PAS plugins
-            self.tearDownMultiPlugins()
 
             # Allow subclass to tear down products
             self.tearDownZope(app)
