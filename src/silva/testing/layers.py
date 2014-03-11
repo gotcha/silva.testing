@@ -39,9 +39,11 @@ class SilvaFixture(Layer):
         ('Products.ZCTextIndex', {'loadZCML': False}, ),
         ('Products.Formulator', {'loadZCML': True}, ),
 
+        ('Products.ParsedXML', {'loadZCML': False}, ),
+        ('Products.XMLWidgets', {'loadZCML': False}, ),
         ('Products.SilvaMetadata', {'loadZCML': True}, ),
         ('Products.SilvaViews', {'loadZCML': False}, ),
-        ('Products.XMLWidgets', {'loadZCML': False}, ),
+        ('Products.SilvaDocument', {'loadZCML': True}, ),
         ('Products.Silva', {'loadZCML': True}, ),
 
     )
@@ -83,9 +85,7 @@ class SilvaFixture(Layer):
 
     def setUpZCML(self):
         """Stack a new global registry and load ZCML configuration of Silva
-        and the core set of add-on products into it. Also set the
-        ``disable-autoinclude`` ZCML feature so that Silva does not attempt to
-        auto-load ZCML using ``z3c.autoinclude``.
+        and the core set of add-on products into it.
         """
 
         # Create a new global registry
@@ -176,7 +176,7 @@ class SilvaFixture(Layer):
 # Silva fixture layer instance. Should not be used on its own, but as a base
 # for other layers.
 
-SILVA_FIXTURE = SilvaFixture()
+SILVA_FIXTURE = SilvaFixture(name='SILVA_FIXTURE')
 
 
 class SilvaTestLifecycle(object):
